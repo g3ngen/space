@@ -37,15 +37,15 @@ pkgs.mkShell {
     xclip
   ];
   shellHook = ''
-    export WORKSPACE_ROOT="$(pwd -P)/.metadata"
-    export LICENSES_DIR="$(pwd -P)/licenses"
+    export WORKSPACE_ROOT="$(pwd)/.metadata"
+    export LICENSES_DIR="$(pwd)/licenses"
+    mkdir -p "$WORKSPACE_ROOT/.config/nvim"
+    mkdir -p "$LICENSES_DIR"
     export HOME="$WORKSPACE_ROOT"
     export XDG_CONFIG_HOME="$WORKSPACE_ROOT/.config"
     export XDG_DATA_HOME="$WORKSPACE_ROOT/.local/share"
-    export XDG_STATE_HOME="$WORKSPACE_ROOT/.local/state"
     export XDG_CACHE_HOME="$WORKSPACE_ROOT/.cache"
     export GNUPGHOME="$WORKSPACE_ROOT/.gnupg"
-    export NVIM_RPLUGIN_MANIFEST="$XDG_DATA_HOME/nvim/rplugin.vim"
     export NIX_SSL_CERT_FILE="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
     export GIT_CONFIG_NOSYSTEM=1
     export GIT_CONFIG_GLOBAL="$WORKSPACE_ROOT/.gitconfig"
@@ -54,12 +54,6 @@ pkgs.mkShell {
 EOF
 
 mkdir -p .metadata/.config/nvim
-mkdir -p .metadata/.local/share/nvim
-mkdir -p .metadata/.local/state/nvim
-mkdir -p .metadata/.cache/nvim
-mkdir -p .metadata/.gnupg
-mkdir -p licenses
-touch .metadata/.local/share/nvim/rplugin.vim
 
 cat << 'EOF' > .metadata/.config/nvim/init.lua
 vim.g.mapleader = " "
@@ -133,6 +127,7 @@ echo ".metadata/" >> .gitignore
 echo "licenses/" >> .gitignore
 
 nix-shell --run "
+  mkdir -p licenses
   printf \"https://$GITHUB_ID:$GITHUB_TOKEN@github.com\n\" > licenses/.git-credentials
   chmod 600 licenses/.git-credentials
   git config --global user.name \"$GIT_USER_NAME\"
@@ -143,7 +138,7 @@ nix-shell --run "
     git-crypt init
     git-crypt export-key ./licenses/unlock.key
   fi
-  git config credential.helper \"store --file=\$(pwd -P)/licenses/.git-credentials\"
+  git config credential.helper \"store --file=\$(pwd)/licenses/.git-credentials\"
   git remote add origin \"$REPO_URL\"
   git add .
   git commit -m \"chore: initialize secure workspace\"
