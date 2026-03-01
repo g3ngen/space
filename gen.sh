@@ -32,21 +32,21 @@ pkgs.mkShell {
     bash-language-server
     pyright
     clang-tools
+    ripgrep
+    cacert
+    xclip
   ];
   shellHook = ''
-    export NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
     export WORKSPACE_ROOT="$(pwd)/.metadata"
     export LICENSES_DIR="$(pwd)/licenses"
-
     mkdir -p "$WORKSPACE_ROOT/.config/nvim"
     mkdir -p "$LICENSES_DIR"
-
     export HOME="$WORKSPACE_ROOT"
     export XDG_CONFIG_HOME="$WORKSPACE_ROOT/.config"
     export XDG_DATA_HOME="$WORKSPACE_ROOT/.local/share"
     export XDG_CACHE_HOME="$WORKSPACE_ROOT/.cache"
     export GNUPGHOME="$WORKSPACE_ROOT/.gnupg"
-
+    export NIX_SSL_CERT_FILE="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
     export GIT_CONFIG_NOSYSTEM=1
     export GIT_CONFIG_GLOBAL="$WORKSPACE_ROOT/.gitconfig"
   '';
@@ -58,9 +58,11 @@ mkdir -p .metadata/.config/nvim
 cat << 'EOF' > .metadata/.config/nvim/init.lua
 vim.g.mapleader = " "
 vim.opt.number = true
+vim.opt.relativenumber = true
 vim.opt.expandtab = true
 vim.opt.shiftwidth = 2
 vim.opt.tabstop = 2
+vim.opt.clipboard = "unnamedplus"
 
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) then
@@ -126,28 +128,21 @@ echo "licenses/" >> .gitignore
 
 nix-shell --run "
   mkdir -p licenses
-
   printf \"https://$GITHUB_ID:$GITHUB_TOKEN@github.com\n\" > licenses/.git-credentials
   chmod 600 licenses/.git-credentials
-
   git config --global user.name \"$GIT_USER_NAME\"
   git config --global user.email \"$GIT_USER_EMAIL\"
-  git config --global credential.helper \"store --file=\$(pwd)/licenses/.git-credentials\"
-
   git init
   git branch -M main
-
   if [ \"$IS_PUBLIC\" == \"false\" ]; then
     git-crypt init
     git-crypt export-key ./licenses/unlock.key
   fi
-
+  git config credential.helper \"store --file=\$(pwd)/licenses/.git-credentials\"
   git remote add origin \"$REPO_URL\"
-
   git add .
-  git commit -m \"chore: initialize workspace\"
+  git commit -m \"chore: initialize secure workspace\"
   git push -u origin main
 "
 
 echo "Workspace initialized."
-
